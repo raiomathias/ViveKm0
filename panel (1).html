@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panel · Vive Km 0</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800">
+<div id="app" class="max-w-5xl mx-auto p-3"></div>
+<script>
+// ====== CONFIGURA AQUÍ ======
+const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co';
+const SUPABASE_KEY = 'TU_ANON_KEY';
+// ============================
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const iso = d => { const x=new Date(d); x.setMinutes(x.getMinutes()-x.getTimezoneOffset()); return x.toISOString().slice(0,10); };
+let perfil=null, tours=[], lunes=null, cal=[], dia=null, reservas=[], abiertas=new Set(), tourSel=null, pax=[{}], tab='cal';
+
+function monday(d){ const x=new Date(d); x.setDate(x.getDate()-((x.getDay()+6)%7)); x.setHours(0,0,0,0); return x; }
+const tn = id => (tours.find(t=>t.id===id)?.titulo?.es)||'';
+
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) return login();
+  const {data}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
+  perfil=data; if(!perfil) return login('Sin perfil');
+  const r=await sb.from('tours').select('*').order('created_at'); tours=r.data||[];
+  tourSel=tours[0]?.id; lunes=monday(new Date()); dia=iso(new Date()); await cargarSemana();
+}
+function login(msg){
+  $('app').innerHTML=`<div class="max-w-sm mx-auto mt-20 bg-white p-6 rounded-2xl shadow space-y-3">
+   <h1 class="text-xl font-bold text-sky-900">⛰ Panel Vive Km 0</h1>${msg?`<p class="text-rose-600 text-sm">${msg}</p>`:''}
+   <input id="em" type="email" placeholder="Correo" class="w-full border rounded p-2">
+   <input id="pw" type="password" placeholder="Contraseña" class="w-full border rounded p-2">
+   <button onclick="entrar()" class="w-full bg-sky-800 text-white rounded p-2">Entrar</button></div>`;
+}
+async function entrar(){
+  const {error}=await sb.auth.signInWithPassword({email:$('em').value,password:$('pw').value});
+  if(error) return login(error.message); init();
+}
+async function cargarSemana(){
+  const d1=new Date(lunes); d1.setDate(d1.getDate()+6);
+  const [c,r]=await Promise.all([
+    sb.rpc('calendario_semana',{p_desde:iso(lunes),p_hasta:iso(d1)}),
+    sb.from('reservas').select('*, participantes(*), profiles(nombre)').gte('fecha_tour',iso(lunes)).lte('fecha_tour',iso(d1)).order('created_at')
+  ]);
+  cal=c.data||[]; reservas=r.data||[]; pintar();
+}
+function pintar(){
+  const dias=[...Array(7)].map((_,i)=>{const d=new Date(lunes);d.setDate(d.getDate()+i);return iso(d)});
+  const nom=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const delDia=reservas.filter(r=>r.fecha_tour===dia);
+  $('app').innerHTML=`
+  <div class="flex justify-between items-center mb-3 bg-sky-900 text-white p-3 rounded-xl">
+    <b>⛰ ${esc(perfil.nombre||'')} <span class="text-xs bg-orange-500 rounded px-2 py-0.5 ml-1">${perfil.rol}</span></b>
+    <span class="text-sm"><a href="index.html" class="underline mr-3">← Sitio</a><button onclick="sb.auth.signOut().then(()=>location.href='index.html')" class="underline">Salir</button></span></div>
+  <div class="flex gap-2 mb-3 text-sm"><button onclick="tab='cal';pintar()" class="px-3 py-1 rounded ${tab==='cal'?'bg-sky-800 text-white':'bg-white'}">Calendario</button>
+   ${perfil.rol==='admin'?`<button onclick="tab='tours';pintar()" class="px-3 py-1 rounded ${tab==='tours'?'bg-sky-800 text-white':'bg-white'}">Tours</button>`:''}</div>
+  ${tab==='tours'?toursHTML():`
+  <div class="flex items-center justify-between mb-2">
+    <button onclick="lunes.setDate(lunes.getDate()-7);cargarSemana()" class="bg-white rounded px-3 py-1">‹</button>
+    <b>Semana del ${iso(lunes)}</b>
+    <button onclick="lunes.setDate(lunes.getDate()+7);cargarSemana()" class="bg-white rounded px-3 py-1">›</button></div>
+  <div class="grid grid-cols-7 gap-1 mb-4">${dias.map((f,i)=>{
+    const tot=cal.filter(c=>c.fecha===f).reduce((s,c)=>s+c.personas,0);
+    return `<button onclick="dia='${f}';pintar()" class="rounded-lg p-2 text-center ${f===dia?'ring-2 ring-orange-500':''} ${tot?'bg-sky-100':'bg-white'}">
+      <div class="text-xs">${nom[i]}</div><div class="text-xs text-slate-500">${f.slice(8)}</div><div class="text-xl font-bold text-sky-900">${tot}</div></button>`}).join('')}</div>
+  <h3 class="font-bold mb-2">${dia} · ${delDia.reduce((s,r)=>s+r.cantidad_personas,0)} personas</h3>
+  <div class="space-y-2">${delDia.map(cardHTML).join('')||'<p class="text-sm text-slate-500">Sin reservas.</p>'}</div>
+  <details class="mt-5 bg-white rounded-xl p-3"><summary class="font-semibold cursor-pointer">+ Agendar en ${dia}</summary>${formHTML()}</details>`}`;
+}
+function cardHTML(r){
+  const socio=r.canal_venta==='socio', ab=abiertas.has(r.id);
+  const puedeBorrar = perfil.rol==='admin' || r.usuario_id===perfil.id;
+  return `<div class="rounded-xl bg-white border-l-4 ${socio?'border-orange-500':'border-sky-600'} shadow-sm">
+   <div class="p-3 flex justify-between items-center cursor-pointer" onclick="abiertas.has('${r.id}')?abiertas.delete('${r.id}'):abiertas.add('${r.id}');pintar()">
+    <div><b>${esc(tn(r.tour_id))}</b> · ${r.cantidad_personas} pax
+     <span class="text-xs ml-1 px-2 py-0.5 rounded ${socio?'bg-orange-100 text-orange-700':'bg-sky-100 text-sky-700'}">${socio?'Socio: '+esc(r.profiles?.nombre||''):'Web directo'}</span></div>
+    <span class="text-xs ${r.estado_pago==='pagado'?'text-emerald-600':'text-amber-600'}">${r.estado_pago}</span></div>
+   ${ab?`<div class="px-3 pb-3 text-sm border-t">
+     <p class="mt-2 text-xs text-slate-500">ID ${r.id.slice(0,8)} · Código ${esc(r.codigo)} · $${(r.monto_total||0).toLocaleString('es-CL')} CLP</p>
+     <ul class="mt-2 space-y-1">${(r.participantes||[]).map(p=>`<li>👤 <b>${esc(p.nombre_completo)}</b> · ${esc(p.documento_identidad)} · ${esc(p.telefono)} · ${esc(p.correo)}${p.detalles_adicionales?`<br><i class="text-xs">${esc(p.detalles_adicionales)}</i>`:''}</li>`).join('')}</ul>
+     ${puedeBorrar?`<button onclick="borrar('${r.id}')" class="mt-2 text-rose-600 text-xs underline">Eliminar reserva</button>`:''}</div>`:''}</div>`;
+}
+function formHTML(){
+  return `<div class="mt-3 space-y-2 text-sm">
+   <select onchange="tourSel=this.value" class="w-full border rounded p-2">${tours.map(t=>`<option value="${t.id}" ${t.id===tourSel?'selected':''}>${esc(t.titulo.es)}</option>`).join('')}</select>
+   ${pax.map((p,i)=>`<div class="grid grid-cols-2 gap-1"><input placeholder="Nombre" value="${esc(p.nombre)}" oninput="pax[${i}].nombre=this.value" class="border rounded p-2 col-span-2">
+    <input placeholder="Pasaporte/Doc" value="${esc(p.documento)}" oninput="pax[${i}].documento=this.value" class="border rounded p-2">
+    <input placeholder="Teléfono" value="${esc(p.telefono)}" oninput="pax[${i}].telefono=this.value" class="border rounded p-2">
+    <input placeholder="Correo" value="${esc(p.correo)}" oninput="pax[${i}].correo=this.value" class="border rounded p-2">
+    <input placeholder="Detalles" value="${esc(p.detalles)}" oninput="pax[${i}].detalles=this.value" class="border rounded p-2"></div>`).join('')}
+   <button onclick="pax.push({});pintar();document.querySelector('details').open=true" class="text-sky-700">+ pasajero</button>
+   <button onclick="agendar()" class="block w-full bg-orange-500 text-white rounded p-2">Agendar ${pax.length} pax</button></div>`;
+}
+async function agendar(){
+  if(pax.some(p=>!p.nombre||!p.documento)) return alert('Nombre y documento obligatorios');
+  const {error}=await sb.rpc('crear_reserva',{p_tour:tourSel,p_fecha:dia,p_participantes:pax});
+  if(error) return alert(error.message); pax=[{}]; cargarSemana();
+}
+async function borrar(id){
+  if(!confirm('¿Eliminar reserva?')) return;
+  const {error}=await sb.from('reservas').delete().eq('id',id); if(error) alert(error.message); cargarSemana();
+}
+// ---- Admin: tours ----
+function toursHTML(){
+  return `<div class="space-y-2">${tours.map(t=>`<div class="bg-white rounded-xl p-3 flex justify-between items-center text-sm">
+    <div><b>${esc(t.titulo.es)}</b><br>$${t.precio_clp.toLocaleString('es-CL')} · cupo ${t.cupo_maximo_diario}/día · ${t.activo?'activo':'oculto'}</div>
+    <div class="space-x-2"><button onclick="editarTour('${t.id}')" class="text-sky-700">Editar</button>
+    <button onclick="borrarTour('${t.id}')" class="text-rose-600">Eliminar</button></div></div>`).join('')}
+   <button onclick="editarTour()" class="bg-sky-800 text-white rounded px-3 py-2 text-sm">+ Nuevo tour</button></div>`;
+}
+async function editarTour(id){
+  const t=tours.find(x=>x.id===id)||{};
+  const titulo=prompt('Título ES|PT|EN (separado por |)',t.titulo?[t.titulo.es,t.titulo.pt,t.titulo.en].join('|'):''); if(!titulo) return;
+  const [es,pt,en]=titulo.split('|');
+  const precio=+prompt('Precio CLP por persona',t.precio_clp||0), cupo=+prompt('Cupo máximo diario',t.cupo_maximo_diario||12);
+  const row={titulo:{es,pt:pt||es,en:en||es},precio_clp:precio,cupo_maximo_diario:cupo};
+  const {error}= id? await sb.from('tours').update(row).eq('id',id) : await sb.from('tours').insert(row);
+  if(error) alert(error.message); await init(); tab='tours'; pintar();
+}
+async function borrarTour(id){ if(confirm('¿Eliminar tour y sus reservas?')){ const {error}=await sb.from('tours').delete().eq('id',id); if(error) alert(error.message); await init(); tab='tours'; pintar(); } }
+init();
+</script></body></html>

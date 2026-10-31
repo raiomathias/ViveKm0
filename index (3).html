@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vive Km 0 · Patagonia Chilena</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<div id="app"></div><div id="modal"></div>
+<script>
+// ====== CONFIGURA AQUÍ ======
+const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co';
+const SUPABASE_KEY = 'TU_ANON_KEY';
+const PANEL_URL = 'panel.html';
+const TASAS = { CLP: 1, USD: 1/950, BRL: 1/175 }; // CLP -> moneda. Ajusta o conecta una API de cambio.
+// ============================
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const T = {
+  es:{hero:'Vive la Patagonia chilena',sub:'Aventuras guiadas en la franja austral',search:'Buscar tour…',inc:'Incluye',noinc:'No incluye',pp:'por persona',book:'Reservar',date:'Fecha',name:'Nombre completo',doc:'Documento / Pasaporte',mail:'Correo',tel:'Teléfono',extra:'Restricciones alimentarias / tallas',pay:'Pagar (simulado)',total:'Total',ok:'¡Reserva confirmada!',code:'Código',add:'+ Agregar pasajero',avail:'cupos',none:'Sin resultados',portal:'Portal de Socios',pass:'Contraseña',enter:'Ingresar',back:'Volver',pick:'Elige una fecha',req:'Completa nombre, documento y correo',maxp:'No hay más cupos ese día',pass_t:'Acceso exclusivo para socios y administradores'},
+  pt:{hero:'Viva a Patagônia chilena',sub:'Aventuras guiadas na faixa austral',search:'Buscar passeio…',inc:'Inclui',noinc:'Não inclui',pp:'por pessoa',book:'Reservar',date:'Data',name:'Nome completo',doc:'Documento / Passaporte',mail:'E-mail',tel:'Telefone',extra:'Restrições alimentares / tamanhos',pay:'Pagar (simulado)',total:'Total',ok:'Reserva confirmada!',code:'Código',add:'+ Adicionar passageiro',avail:'vagas',none:'Sem resultados',portal:'Portal de Parceiros',pass:'Senha',enter:'Entrar',back:'Voltar',pick:'Escolha uma data',req:'Preencha nome, documento e e-mail',maxp:'Sem mais vagas nesse dia',pass_t:'Acesso exclusivo para parceiros e administradores'},
+  en:{hero:'Live Chilean Patagonia',sub:'Guided adventures in the austral strip',search:'Search tours…',inc:'Included',noinc:'Not included',pp:'per person',book:'Book now',date:'Date',name:'Full name',doc:'ID / Passport',mail:'Email',tel:'Phone',extra:'Dietary restrictions / sizes',pay:'Pay (simulated)',total:'Total',ok:'Booking confirmed!',code:'Code',add:'+ Add guest',avail:'spots',none:'No results',portal:'Partner Portal',pass:'Password',enter:'Sign in',back:'Back',pick:'Pick a date',req:'Fill in name, ID and email',maxp:'No more spots that day',pass_t:'Exclusive access for partners and admins'}
+};
+let lang = localStorage.lang || (navigator.language.startsWith('pt')?'pt':navigator.language.startsWith('en')?'en':'es');
+let cur = localStorage.cur || (lang==='pt'?'BRL':'CLP');
+let tours=[], q='', sel=null, disp={}, pax=[{}], fechaSel=null, mes=null, maxFecha=null;
+const t = k => T[lang][k];
+const L = o => (o && (o[lang]||o.es)) || '';
+const loc = () => lang==='pt'?'pt-BR':lang==='en'?'en-US':'es-CL';
+const money = clp => new Intl.NumberFormat(loc(),{style:'currency',currency:cur,maximumFractionDigits:cur==='CLP'?0:2}).format(clp*TASAS[cur]);
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = id => document.getElementById(id);
+const iso = (y,m,d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+const isoD = d => iso(d.getFullYear(),d.getMonth(),d.getDate());
+
+// NOTA: no usar "lang=..." inline: en un onchange "lang" apunta a la propiedad del elemento. Por eso son funciones.
+function setLang(v){ lang=v; localStorage.lang=v; render(); if(sel) modal(); }
+function setCur(v){ cur=v; localStorage.cur=v; render(); if(sel) modal(); }
+function setQ(v){ q=v; grid(); }
+
+async function load(){ const {data}=await sb.from('tours').select('*').eq('activo',true); tours=data||[]; render(); }
+
+function render(){
+  document.documentElement.lang=lang;
+  $('app').innerHTML = `
+  <header class="relative h-[70vh] min-h-[420px] bg-cover bg-center" style="background-image:linear-gradient(rgba(15,50,80,.55),rgba(15,50,80,.75)),url('https://images.unsplash.com/photo-1531761535209-180857e963b9?w=1600')">
+    <nav class="flex flex-wrap gap-2 justify-between items-center p-4 text-white relative z-10">
+      <b class="text-xl">⛰ Vive Km 0</b>
+      <div class="flex gap-2 text-sm items-center">
+        <button onclick="loginModal()" class="border border-white/70 hover:bg-white hover:text-sky-900 rounded-full px-3 py-1 transition">🔐 ${t('portal')}</button>
+        <select onchange="setLang(this.value)" class="text-slate-800 rounded px-2 py-1">${['es','pt','en'].map(l=>`<option value="${l}" ${l===lang?'selected':''}>${l.toUpperCase()}</option>`).join('')}</select>
+        <select onchange="setCur(this.value)" class="text-slate-800 rounded px-2 py-1">${Object.keys(TASAS).map(c=>`<option ${c===cur?'selected':''}>${c}</option>`).join('')}</select>
+      </div></nav>
+    <div class="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4">
+      <h1 class="text-4xl md:text-6xl font-bold">${t('hero')}</h1><p class="mt-3 text-lg">${t('sub')}</p>
+      <input value="${esc(q)}" placeholder="${t('search')}" oninput="setQ(this.value)" class="mt-6 w-full max-w-md px-4 py-3 rounded-full text-slate-800 outline-none"></div></header>
+  <main id="grid" class="max-w-6xl mx-auto p-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 -mt-10 relative"></main>`;
+  grid();
+}
+function grid(){
+  const list = tours.filter(x=>L(x.titulo).toLowerCase().includes(q.toLowerCase()));
+  $('grid').innerHTML = list.map(x=>`<article class="bg-white rounded-2xl shadow overflow-hidden flex flex-col">
+      <img src="${esc((x.imagenes||[])[0])}" loading="lazy" class="h-48 w-full object-cover">
+      <div class="p-4 flex-1 flex flex-col gap-2">
+        <h2 class="font-bold text-lg text-sky-900">${esc(L(x.titulo))}</h2>
+        <p class="text-sm text-slate-600">${esc(L(x.descripcion))}</p>
+        <p class="text-xs">⏱ ${esc(L(x.duracion))} · 📍 ${esc(x.punto_encuentro)}</p>
+        <p class="text-xs"><b class="text-emerald-700">${t('inc')}:</b> ${esc((x.incluye?.[lang]||[]).join(', '))}</p>
+        <p class="text-xs"><b class="text-rose-700">${t('noinc')}:</b> ${esc((x.no_incluye?.[lang]||[]).join(', '))}</p>
+        <div class="mt-auto flex items-center justify-between pt-2">
+          <div><b class="text-xl text-sky-900">${money(x.precio_clp)}</b><span class="text-xs text-slate-500"> ${t('pp')}</span></div>
+          <button onclick="open_('${x.id}')" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg">${t('book')}</button></div>
+      </div></article>`).join('') || `<p class="col-span-full text-center">${t('none')}</p>`;
+}
+
+// ---------- Portal de Socios ----------
+async function loginModal(msg){
+  if(!msg){ const {data:{session}}=await sb.auth.getSession(); if(session) return location.href=PANEL_URL; }
+  $('modal').innerHTML=`<div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3">
+   <div class="bg-white rounded-2xl w-full max-w-sm p-6 space-y-3">
+    <div class="flex justify-between items-start"><div><h3 class="font-bold text-xl text-sky-900">🔐 ${t('portal')}</h3><p class="text-xs text-slate-500">${t('pass_t')}</p></div>
+     <button onclick="$('modal').innerHTML=''" class="text-2xl leading-none">×</button></div>
+    ${msg?`<p class="text-sm text-rose-600">${esc(msg)}</p>`:''}
+    <input id="lem" type="email" placeholder="${t('mail')}" class="w-full border rounded-lg p-2.5">
+    <input id="lpw" type="password" placeholder="${t('pass')}" onkeydown="if(event.key==='Enter')entrarSocio()" class="w-full border rounded-lg p-2.5">
+    <button onclick="entrarSocio()" class="w-full bg-sky-800 hover:bg-sky-900 text-white rounded-lg p-2.5">${t('enter')}</button></div></div>`;
+}
+async function entrarSocio(){
+  const {error}=await sb.auth.signInWithPassword({email:$('lem').value.trim(),password:$('lpw').value});
+  if(error) return loginModal(error.message);
+  location.href=PANEL_URL;
+}
+
+// ---------- Reserva ----------
+async function open_(id){
+  sel=tours.find(x=>x.id===id); pax=[{}]; disp={}; fechaSel=null;
+  const hoy=new Date(), fin=new Date(Date.now()+180*864e5); maxFecha=isoD(fin);
+  mes=new Date(hoy.getFullYear(),hoy.getMonth(),1);
+  const {data}=await sb.rpc('disponibilidad',{p_tour:id,p_desde:isoD(hoy),p_hasta:isoD(fin)});
+  (data||[]).forEach(r=>disp[r.fecha]=r.disponibles);
+  modal();
+}
+function mover(n){ mes=new Date(mes.getFullYear(),mes.getMonth()+n,1); modal(); }
+function elegir(f){ fechaSel=f; const max=disp[f]; if(pax.length>max) pax=pax.slice(0,max); modal(); }
+function addPax(){ if(fechaSel && pax.length>=disp[fechaSel]) return alert(t('maxp')); pax.push({}); modal(); }
+function setP(i,k,v){ pax[i][k]=v; }
+
+function calendario(){
+  const y=mes.getFullYear(), m=mes.getMonth(), off=(new Date(y,m,1).getDay()+6)%7, n=new Date(y,m+1,0).getDate();
+  const hoy=new Date(), esPrimero=(y===hoy.getFullYear()&&m===hoy.getMonth());
+  const finM=new Date(maxFecha+'T00:00'); const esUltimo=(y===finM.getFullYear()&&m===finM.getMonth());
+  const dias=[...Array(7)].map((_,i)=>new Intl.DateTimeFormat(loc(),{weekday:'short'}).format(new Date(2024,0,1+i)));
+  let celdas=''; for(let i=0;i<off;i++) celdas+='<div></div>';
+  for(let d=1; d<=n; d++){
+    const f=iso(y,m,d), v=disp[f], ok=v>0, act=f===fechaSel;
+    celdas+= ok
+     ? `<button onclick="elegir('${f}')" class="aspect-square rounded-xl flex flex-col items-center justify-center transition ${act?'bg-orange-500 text-white shadow-lg scale-105':'bg-sky-50 hover:bg-sky-100 text-sky-900'}">
+         <span class="font-semibold">${d}</span><span class="text-[10px] ${act?'text-white/90':'text-emerald-600'}">${v} ${t('avail')}</span></button>`
+     : `<div class="aspect-square rounded-xl flex items-center justify-center text-slate-300 text-sm ${v===0?'line-through':''}">${d}</div>`;
+  }
+  return `<div class="mt-3 border rounded-2xl p-3 bg-white">
+    <div class="flex items-center justify-between mb-2">
+      <button onclick="mover(-1)" ${esPrimero?'disabled':''} class="w-9 h-9 rounded-full bg-slate-100 disabled:opacity-30">‹</button>
+      <b class="capitalize text-sky-900">${new Intl.DateTimeFormat(loc(),{month:'long',year:'numeric'}).format(mes)}</b>
+      <button onclick="mover(1)" ${esUltimo?'disabled':''} class="w-9 h-9 rounded-full bg-slate-100 disabled:opacity-30">›</button></div>
+    <div class="grid grid-cols-7 gap-1 text-center text-xs text-slate-500 mb-1">${dias.map(d=>`<div>${d}</div>`).join('')}</div>
+    <div class="grid grid-cols-7 gap-1">${celdas}</div>
+    <p class="text-center text-sm mt-2 ${fechaSel?'text-orange-600 font-semibold':'text-slate-400'}">${fechaSel? new Intl.DateTimeFormat(loc(),{dateStyle:'full'}).format(new Date(fechaSel+'T00:00')) : t('pick')}</p></div>`;
+}
+function modal(msg){
+  $('modal').innerHTML = `<div class="fixed inset-0 bg-black/60 z-50 overflow-auto p-3"><div class="bg-white rounded-2xl max-w-xl mx-auto p-5">
+   <div class="flex justify-between"><h3 class="font-bold text-xl text-sky-900">${esc(L(sel.titulo))}</h3><button onclick="sel=null;$('modal').innerHTML=''" class="text-2xl leading-none">×</button></div>
+   ${msg?`<div class="my-4 p-4 bg-emerald-50 rounded-lg text-emerald-800">${msg}</div>`:`
+   ${calendario()}
+   ${pax.map((p,i)=>`<fieldset class="border rounded-xl p-3 mt-3 grid grid-cols-2 gap-2 text-sm"><legend class="px-1 text-xs text-slate-500">#${i+1}</legend>
+     <input placeholder="${t('name')}" value="${esc(p.nombre)}" oninput="setP(${i},'nombre',this.value)" class="border rounded-lg p-2 col-span-2">
+     <input placeholder="${t('doc')}" value="${esc(p.documento)}" oninput="setP(${i},'documento',this.value)" class="border rounded-lg p-2">
+     <input placeholder="${t('tel')}" value="${esc(p.telefono)}" oninput="setP(${i},'telefono',this.value)" class="border rounded-lg p-2">
+     <input placeholder="${t('mail')}" value="${esc(p.correo)}" oninput="setP(${i},'correo',this.value)" class="border rounded-lg p-2 col-span-2">
+     <input placeholder="${t('extra')}" value="${esc(p.detalles)}" oninput="setP(${i},'detalles',this.value)" class="border rounded-lg p-2 col-span-2"></fieldset>`).join('')}
+   <button onclick="addPax()" class="mt-2 text-sky-700 text-sm">${t('add')}</button>
+   <div class="flex justify-between items-center mt-4"><b>${t('total')}: ${money(sel.precio_clp*pax.length)}</b>
+    <button onclick="pagar()" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg">${t('pay')}</button></div>`}
+  </div></div>`;
+}
+async function pagar(){
+  if(!fechaSel) return alert(t('pick'));
+  if(pax.some(p=>!p.nombre||!p.documento||!p.correo)) return alert(t('req'));
+  const {data:r,error}=await sb.rpc('crear_reserva',{p_tour:sel.id,p_fecha:fechaSel,p_participantes:pax});
+  if(error) return alert(error.message);
+  // AQUÍ después: redirigir a Webpay/Mercado Pago (Edge Function). Por ahora se simula el pago:
+  const {data:p,error:e2}=await sb.rpc('simular_pago',{p_reserva:r.id});
+  if(e2) return alert(e2.message);
+  modal(`<b>${t('ok')}</b><br>${t('code')}: <b>${esc(p.codigo)}</b><br>${esc(fechaSel)} · ${p.cantidad_personas} · ${money(p.monto_total)}`);
+}
+load();
+</script></body></html>
