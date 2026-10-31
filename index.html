@@ -1,30 +1,54 @@
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Vive Km 0 · Patagonia Chilena</title>
+<meta name="description" content="Tours de aventura en la Patagonia chilena: trekking, volcanes y más. Reserva online.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Tailwind por CDN (desarrollo). Para producción compila: npx tailwindcss -o tailwind.css --minify y reemplaza este script por <link rel="stylesheet" href="tailwind.css"> -->
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['"Plus Jakarta Sans"','ui-sans-serif','system-ui','sans-serif']}}}}</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+html{scroll-behavior:smooth}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #fb923c;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.animate-bounce{animation:none}}
+</style>
 </head>
-<body class="bg-slate-50 text-slate-800">
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
 <div id="app"></div><div id="modal"></div>
 <script>
 // ====== CONFIGURA AQUÍ ======
 const SUPABASE_URL = 'https://tqvvgpwfbpulethdhufe.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_hiBf5GuftI9W9eivIVxgbQ_EBC33zTb';
 const PANEL_URL = 'panel.html';
-const TASAS = { CLP: 1, USD: 1/950, BRL: 1/175 }; // CLP -> moneda. Ajusta o conecta una API de cambio.
+const WHATSAPP = '56900000000';              // ← tu número con código de país, sin + ni espacios
+const CONTACT_EMAIL = 'contacto@vivekm0.cl'; // ← tu correo real
+const HERO_LOCAL = 'img/hero.jpg';           // ← sube tu foto optimizada (1920px, <250KB). Si no existe usa la de respaldo
+const HERO_FALLBACK = 'https://images.unsplash.com/photo-1531761535209-180857e963b9?w=1920&q=80';
+const TASAS = { CLP: 1, USD: 1/950, BRL: 1/175 }; // CLP -> moneda. Valores referenciales.
 // ============================
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const T = {
-  es:{hero:'Vive la Patagonia chilena',sub:'Aventuras guiadas en la franja austral',search:'¿Qué aventura buscas en la Patagonia?',eyebrow:'Turismo aventura · Franja austral',inc:'Incluye',noinc:'No incluye',pp:'por persona',book:'Reservar',date:'Fecha',name:'Nombre completo',doc:'Documento / Pasaporte',mail:'Correo',tel:'Teléfono',extra:'Restricciones alimentarias / tallas',pay:'Pagar (simulado)',total:'Total',ok:'¡Reserva confirmada!',code:'Código',add:'+ Agregar pasajero',avail:'cupos',none:'Sin resultados',portal:'Portal de Socios',pass:'Contraseña',enter:'Ingresar',back:'Volver',pick:'Elige una fecha',req:'Completa nombre, documento y correo',maxp:'No hay más cupos ese día',pass_t:'Acceso exclusivo para socios y administradores'},
-  pt:{hero:'Viva a Patagônia chilena',sub:'Aventuras guiadas na faixa austral',search:'Que aventura você procura na Patagônia?',eyebrow:'Turismo aventura · Faixa austral',inc:'Inclui',noinc:'Não inclui',pp:'por pessoa',book:'Reservar',date:'Data',name:'Nome completo',doc:'Documento / Passaporte',mail:'E-mail',tel:'Telefone',extra:'Restrições alimentares / tamanhos',pay:'Pagar (simulado)',total:'Total',ok:'Reserva confirmada!',code:'Código',add:'+ Adicionar passageiro',avail:'vagas',none:'Sem resultados',portal:'Portal de Parceiros',pass:'Senha',enter:'Entrar',back:'Voltar',pick:'Escolha uma data',req:'Preencha nome, documento e e-mail',maxp:'Sem mais vagas nesse dia',pass_t:'Acesso exclusivo para parceiros e administradores'},
-  en:{hero:'Live Chilean Patagonia',sub:'Guided adventures in the austral strip',search:'Which adventure are you looking for in Patagonia?',eyebrow:'Adventure travel · Austral strip',inc:'Included',noinc:'Not included',pp:'per person',book:'Book now',date:'Date',name:'Full name',doc:'ID / Passport',mail:'Email',tel:'Phone',extra:'Dietary restrictions / sizes',pay:'Pay (simulated)',total:'Total',ok:'Booking confirmed!',code:'Code',add:'+ Add guest',avail:'spots',none:'No results',portal:'Partner Portal',pass:'Password',enter:'Sign in',back:'Back',pick:'Pick a date',req:'Fill in name, ID and email',maxp:'No more spots that day',pass_t:'Exclusive access for partners and admins'}
+  es:{hero:'Vive la Patagonia chilena',sub:'Aventuras guiadas en la franja austral',search:'¿Qué aventura buscas en la Patagonia?',eyebrow:'Turismo aventura · Franja austral',see:'Ver tours',tours:'Nuestros tours',count:n=>n===1?'1 tour':n+' tours',inc:'Incluye',noinc:'No incluye',pp:'por persona',book:'Reservar',date:'Fecha',name:'Nombre completo',doc:'Documento / Pasaporte',mail:'Correo',tel:'Teléfono',extra:'Restricciones alimentarias / tallas',pay:'Pagar (simulado)',paying:'Procesando…',total:'Total',ok:'¡Reserva confirmada!',code:'Código',add:'+ Agregar pasajero',avail:'cupos',none:'Sin resultados para tu búsqueda',portal:'Portal de Socios',pass:'Contraseña',enter:'Ingresar',pick:'Elige una fecha',req:'Completa nombre, documento y correo de cada pasajero',maxp:'No hay más cupos ese día',pass_t:'Acceso exclusivo para socios y administradores',close:'Cerrar',fx:'Los valores en USD y BRL son referenciales. El cobro se realiza en CLP.',wa:'Escríbenos por WhatsApp',contact:'Contacto',trust:[['Guías locales','Conocen cada ruta y cuidan al grupo.'],['Grupos reducidos','Cupos limitados por día para una mejor experiencia.'],['Reserva online segura','Confirmas fecha y pago en un solo paso.']],foot:'Aventuras en la Patagonia chilena.',loaderr:'No pudimos cargar los tours. Intenta nuevamente.'},
+  pt:{hero:'Viva a Patagônia chilena',sub:'Aventuras guiadas na faixa austral',search:'Que aventura você procura na Patagônia?',eyebrow:'Turismo aventura · Faixa austral',see:'Ver passeios',tours:'Nossos passeios',count:n=>n===1?'1 passeio':n+' passeios',inc:'Inclui',noinc:'Não inclui',pp:'por pessoa',book:'Reservar',date:'Data',name:'Nome completo',doc:'Documento / Passaporte',mail:'E-mail',tel:'Telefone',extra:'Restrições alimentares / tamanhos',pay:'Pagar (simulado)',paying:'Processando…',total:'Total',ok:'Reserva confirmada!',code:'Código',add:'+ Adicionar passageiro',avail:'vagas',none:'Sem resultados para sua busca',portal:'Portal de Parceiros',pass:'Senha',enter:'Entrar',pick:'Escolha uma data',req:'Preencha nome, documento e e-mail de cada passageiro',maxp:'Sem mais vagas nesse dia',pass_t:'Acesso exclusivo para parceiros e administradores',close:'Fechar',fx:'Valores em USD e BRL são referenciais. A cobrança é feita em CLP.',wa:'Fale conosco no WhatsApp',contact:'Contato',trust:[['Guias locais','Conhecem cada trilha e cuidam do grupo.'],['Grupos reduzidos','Vagas limitadas por dia para uma experiência melhor.'],['Reserva online segura','Você confirma data e pagamento em um só passo.']],foot:'Aventuras na Patagônia chilena.',loaderr:'Não foi possível carregar os passeios. Tente novamente.'},
+  en:{hero:'Live Chilean Patagonia',sub:'Guided adventures in the austral strip',search:'Which adventure are you looking for in Patagonia?',eyebrow:'Adventure travel · Austral strip',see:'See tours',tours:'Our tours',count:n=>n===1?'1 tour':n+' tours',inc:'Included',noinc:'Not included',pp:'per person',book:'Book now',date:'Date',name:'Full name',doc:'ID / Passport',mail:'Email',tel:'Phone',extra:'Dietary restrictions / sizes',pay:'Pay (simulated)',paying:'Processing…',total:'Total',ok:'Booking confirmed!',code:'Code',add:'+ Add guest',avail:'spots',none:'No results for your search',portal:'Partner Portal',pass:'Password',enter:'Sign in',pick:'Pick a date',req:'Fill in name, ID and email for every guest',maxp:'No more spots that day',pass_t:'Exclusive access for partners and admins',close:'Close',fx:'USD and BRL amounts are approximate. You are charged in CLP.',wa:'Chat with us on WhatsApp',contact:'Contact',trust:[['Local guides','They know every route and look after the group.'],['Small groups','Limited spots per day for a better experience.'],['Secure online booking','Confirm date and payment in a single step.']],foot:'Adventures in Chilean Patagonia.',loaderr:'We could not load the tours. Please try again.'}
 };
+const I = {
+  clock:'<circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 7v5l3 2"/>',
+  pin:'<path stroke-linecap="round" stroke-linejoin="round" d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M20 20l-3.5-3.5"/>',
+  user:'<path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 20a8 8 0 0116 0"/>',
+  mtn:'<path stroke-linecap="round" stroke-linejoin="round" d="M3 20l6-10 4 6 3-4 5 8z"/>',
+  wa:'<path stroke-linecap="round" stroke-linejoin="round" d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"/>',
+  shield:'<path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/>',
+  group:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path stroke-linecap="round" d="M3 20a6 6 0 0112 0M15 14.5a5 5 0 016 5.5"/>',
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path stroke-linecap="round" d="M8 11V8a4 4 0 018 0v3"/>',
+  down:'<path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/>'
+};
+const ic = (n,c='w-4 h-4') => `<svg class="${c} shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
 let lang = localStorage.lang || (navigator.language.startsWith('pt')?'pt':navigator.language.startsWith('en')?'en':'es');
 let cur = localStorage.cur || (lang==='pt'?'BRL':'CLP');
-let tours=[], q='', sel=null, disp={}, pax=[{}], fechaSel=null, mes=null, maxFecha=null;
+let tours=[], q='', sel=null, disp={}, pax=[{}], fechaSel=null, mes=null, maxFecha=null, err='', busy=false, loadErr=false, tmr;
 const t = k => T[lang][k];
 const L = o => (o && (o[lang]||o.es)) || '';
 const loc = () => lang==='pt'?'pt-BR':lang==='en'?'en-US':'es-CL';
@@ -33,79 +57,112 @@ const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 const $ = id => document.getElementById(id);
 const iso = (y,m,d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 const isoD = d => iso(d.getFullYear(),d.getMonth(),d.getDate());
+const BTN = 'bg-orange-700 hover:bg-orange-800 text-white font-semibold rounded-full transition'; // blanco sobre orange-700 ≈ 5:1 (AA)
 
-// NOTA: no usar "lang=..." inline: en un onchange "lang" apunta a la propiedad del elemento. Por eso son funciones.
-function setLang(v){ lang=v; localStorage.lang=v; render(); if(sel) modal(); }
+// Nota: no usar "lang=..." inline: dentro de un onchange apunta a la propiedad del elemento.
+function setLang(v){ lang=v; localStorage.lang=v; err=''; render(); if(sel) modal(); }
 function setCur(v){ cur=v; localStorage.cur=v; render(); if(sel) modal(); }
-function setQ(v){ q=v; grid(); }
+function setQ(v){ q=v; grid(); clearTimeout(tmr); if(v.trim()) tmr=setTimeout(()=>irAGrid(false),700); }
+function irAGrid(force){ const g=$('tours'); if(force||g.getBoundingClientRect().top>innerHeight*.5) g.scrollIntoView({behavior:'smooth',block:'start'}); }
+function closeModal(){ sel=null; err=''; busy=false; $('modal').innerHTML=''; }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && $('modal').innerHTML) closeModal(); });
+function focusModal(){ const el=$('modal').querySelector('[autofocus],input,select,button'); if(el) el.focus(); }
 
-async function load(){ const {data}=await sb.from('tours').select('*').eq('activo',true); tours=data||[]; render(); }
+async function load(){
+  render();
+  const {data,error}=await sb.from('tours').select('*').eq('activo',true);
+  tours=data||[]; loadErr=!!error; grid();
+}
 
 function render(){
   document.documentElement.lang=lang;
   $('app').innerHTML = `
-  <header class="relative min-h-[88svh] flex flex-col overflow-hidden">
-    <div class="absolute inset-0 bg-cover bg-center scale-105" style="background-image:url('https://images.unsplash.com/photo-1531761535209-180857e963b9?w=1920&q=80')"></div>
+  <header class="relative min-h-[88svh] flex flex-col overflow-hidden bg-slate-900">
+    <img src="${HERO_LOCAL}" onerror="this.onerror=null;this.src='${HERO_FALLBACK}'" alt="" fetchpriority="high" decoding="async" class="absolute inset-0 w-full h-full object-cover">
     <div class="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-900/35 to-slate-950/85"></div>
     <div class="absolute inset-0 bg-gradient-to-r from-slate-950/40 via-transparent to-slate-950/40"></div>
 
-    <nav class="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 flex flex-wrap items-center justify-between gap-3">
+    <nav class="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 flex flex-wrap items-center justify-between gap-3" aria-label="Principal">
       <a href="#" class="flex items-center gap-3 text-white">
         <img src="logo.png" alt="Vive Km 0" onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden')" class="h-11 sm:h-12 w-auto drop-shadow">
-        <span class="hidden w-11 h-11 rounded-xl bg-white/15 backdrop-blur-md ring-1 ring-white/30 items-center justify-center text-xl flex">⛰</span>
-        <span class="leading-tight"><span class="block text-lg sm:text-xl font-extrabold tracking-tight">Vive Km 0</span><span class="block text-[10px] sm:text-xs uppercase tracking-[.25em] text-white/70">Patagonia Chilena</span></span>
+        <span class="hidden w-11 h-11 rounded-xl bg-white/15 backdrop-blur-md ring-1 ring-white/30 items-center justify-center flex">${ic('mtn','w-6 h-6')}</span>
+        <span class="leading-tight"><span class="block text-lg sm:text-xl font-extrabold tracking-tight">Vive Km 0</span><span class="block text-[11px] sm:text-xs uppercase tracking-[.25em] text-white/80">Patagonia Chilena</span></span>
       </a>
-      <div class="flex flex-wrap items-center justify-end gap-2 text-xs sm:text-sm">
-        <div class="flex rounded-full bg-white/10 backdrop-blur-md ring-1 ring-white/25 p-0.5">
-          ${['pt','es','en'].map(l=>`<button onclick="setLang('${l}')" class="px-3 py-1.5 rounded-full font-semibold transition ${l===lang?'bg-white text-sky-900 shadow':'text-white/80 hover:text-white'}">${l.toUpperCase()}</button>`).join('')}</div>
-        <div class="flex rounded-full bg-white/10 backdrop-blur-md ring-1 ring-white/25 p-0.5">
-          ${Object.keys(TASAS).map(c=>`<button onclick="setCur('${c}')" class="px-3 py-1.5 rounded-full font-semibold transition ${c===cur?'bg-white text-sky-900 shadow':'text-white/80 hover:text-white'}">${c}</button>`).join('')}</div>
-        <button onclick="loginModal()" class="flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/90 hover:text-sky-900 text-white backdrop-blur-md ring-1 ring-white/25 px-4 py-2 font-semibold transition">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 20a8 8 0 0116 0"/></svg>${t('portal')}</button>
+      <div class="flex flex-wrap items-center justify-end gap-2 text-sm">
+        <div class="flex items-center rounded-full bg-white/10 backdrop-blur-md ring-1 ring-white/25 p-0.5" role="group" aria-label="Idioma y moneda">
+          ${['pt','es','en'].map(l=>`<button onclick="setLang('${l}')" aria-pressed="${l===lang}" class="min-h-[44px] sm:min-h-[36px] min-w-[44px] px-3 rounded-full font-semibold transition ${l===lang?'bg-white text-sky-900 shadow':'text-white hover:bg-white/15'}">${l.toUpperCase()}</button>`).join('')}
+          <span class="w-px h-6 bg-white/30 mx-1" aria-hidden="true"></span>
+          ${Object.keys(TASAS).map(c=>`<button onclick="setCur('${c}')" aria-pressed="${c===cur}" class="min-h-[44px] sm:min-h-[36px] min-w-[44px] px-3 rounded-full font-semibold transition ${c===cur?'bg-white text-sky-900 shadow':'text-white hover:bg-white/15'}">${c}</button>`).join('')}</div>
+        <button onclick="loginModal()" class="flex items-center gap-2 min-h-[44px] sm:min-h-[40px] rounded-full bg-white/10 hover:bg-white hover:text-sky-900 text-white backdrop-blur-md ring-1 ring-white/25 px-4 font-semibold transition">${ic('user')}${t('portal')}</button>
       </div>
     </nav>
 
-    <div class="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 pb-24 pt-10">
-      <span class="mb-5 inline-block rounded-full bg-white/10 backdrop-blur-md ring-1 ring-white/25 px-4 py-1.5 text-[11px] sm:text-xs uppercase tracking-[.3em] text-white/90">${t('eyebrow')}</span>
+    <div class="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 pb-20 pt-10">
+      <span class="mb-5 inline-block rounded-full bg-white/10 backdrop-blur-md ring-1 ring-white/25 px-4 py-1.5 text-xs uppercase tracking-[.3em] text-white">${t('eyebrow')}</span>
       <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] text-white max-w-4xl drop-shadow-[0_2px_12px_rgba(0,0,0,.45)]">${t('hero')}</h1>
-      <p class="mt-5 max-w-2xl text-base sm:text-xl font-light text-white/85 leading-relaxed">${t('sub')}</p>
-      <label class="mt-9 w-full max-w-2xl flex items-center gap-3 rounded-full bg-white/95 backdrop-blur-xl shadow-2xl shadow-black/40 ring-1 ring-white/60 pl-5 pr-2 py-2 focus-within:ring-4 focus-within:ring-orange-400/60 transition">
-        <svg class="w-5 h-5 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M20 20l-3.5-3.5"/></svg>
-        <input value="${esc(q)}" placeholder="${t('search')}" oninput="setQ(this.value)" class="flex-1 min-w-0 bg-transparent py-2.5 text-sm sm:text-base text-slate-800 placeholder-slate-400 outline-none">
-        <span class="hidden sm:inline-flex rounded-full bg-orange-500 text-white font-semibold text-sm px-5 py-2.5">🔎</span>
-      </label>
+      <p class="mt-5 max-w-2xl text-base sm:text-xl font-light text-white/90 leading-relaxed">${t('sub')}</p>
+      <form onsubmit="event.preventDefault();irAGrid(true)" role="search" class="mt-9 w-full max-w-2xl flex items-center gap-3 rounded-full bg-white/95 backdrop-blur-xl shadow-2xl shadow-black/40 ring-1 ring-white/60 pl-5 pr-2 py-2 focus-within:ring-4 focus-within:ring-orange-400/60 transition">
+        <span class="text-slate-500">${ic('search','w-5 h-5')}</span>
+        <input type="search" value="${esc(q)}" placeholder="${t('search')}" aria-label="${t('search')}" oninput="setQ(this.value)" class="flex-1 min-w-0 bg-transparent py-2.5 text-base text-slate-800 placeholder-slate-500 outline-none">
+        <button type="submit" aria-label="${t('see')}" class="${BTN} shrink-0 w-11 h-11 sm:w-auto sm:px-5 flex items-center justify-center gap-2"><span class="sm:hidden">${ic('search','w-5 h-5')}</span><span class="hidden sm:inline">${t('see')}</span></button>
+      </form>
     </div>
+    <a href="#tours" aria-label="${t('see')}" class="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 text-white/90 animate-bounce min-w-[44px] min-h-[44px] flex items-center justify-center">${ic('down','w-7 h-7')}</a>
   </header>
-  <main id="grid" class="max-w-6xl mx-auto p-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 -mt-14 relative z-10"></main>`;
+
+  <section id="tours" class="max-w-6xl mx-auto px-4 py-12 scroll-mt-4">
+    <div class="flex items-end justify-between mb-6"><h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-sky-950">${t('tours')}</h2><span id="count" class="text-sm text-slate-600" aria-live="polite"></span></div>
+    <div id="grid" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"></div>
+    <p id="fx" class="mt-6 text-xs text-slate-600"></p>
+  </section>
+
+  <section class="bg-white border-y border-slate-200"><div class="max-w-6xl mx-auto px-4 py-10 grid gap-6 sm:grid-cols-3">
+    ${t('trust').map((x,i)=>`<div class="flex gap-4"><span class="w-11 h-11 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center shrink-0">${ic(['shield','group','lock'][i],'w-6 h-6')}</span><div><h3 class="font-bold text-sky-950">${x[0]}</h3><p class="text-sm text-slate-600 mt-1">${x[1]}</p></div></div>`).join('')}
+  </div></section>
+
+  <footer class="bg-slate-900 text-slate-300"><div class="max-w-6xl mx-auto px-4 py-10 grid gap-6 sm:grid-cols-2 text-sm">
+    <div><b class="text-white text-lg">Vive Km 0</b><p class="mt-2">${t('foot')}</p></div>
+    <div><b class="text-white">${t('contact')}</b>
+      <p class="mt-2"><a class="underline hover:text-white" href="https://wa.me/${WHATSAPP}" target="_blank" rel="noopener">WhatsApp</a></p>
+      <p><a class="underline hover:text-white" href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a></p></div>
+  </div><p class="text-center text-xs text-slate-400 pb-6">© ${new Date().getFullYear()} Vive Km 0 · Patagonia Chilena</p></footer>
+
+  <a href="https://wa.me/${WHATSAPP}" target="_blank" rel="noopener" aria-label="${t('wa')}" title="${t('wa')}" class="fixed bottom-4 right-4 z-40 w-14 h-14 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white shadow-xl flex items-center justify-center transition">${ic('wa','w-7 h-7')}</a>`;
   grid();
 }
+
 function grid(){
-  const list = tours.filter(x=>L(x.titulo).toLowerCase().includes(q.toLowerCase()));
-  $('grid').innerHTML = list.map(x=>`<article class="bg-white rounded-2xl shadow overflow-hidden flex flex-col">
-      <img src="${esc((x.imagenes||[])[0])}" loading="lazy" class="h-48 w-full object-cover">
-      <div class="p-4 flex-1 flex flex-col gap-2">
-        <h2 class="font-bold text-lg text-sky-900">${esc(L(x.titulo))}</h2>
+  const list = tours.filter(x=>L(x.titulo).toLowerCase().includes(q.trim().toLowerCase()));
+  $('count').textContent = tours.length ? t('count')(list.length) : '';
+  $('fx').textContent = cur!=='CLP' ? '≈ '+t('fx') : '';
+  $('grid').innerHTML = list.map(x=>`<article class="bg-white rounded-2xl shadow-md hover:shadow-xl transition overflow-hidden flex flex-col">
+      <img src="${esc((x.imagenes||[])[0])}" alt="${esc(L(x.titulo))}" loading="lazy" class="h-48 w-full object-cover bg-slate-200">
+      <div class="p-5 flex-1 flex flex-col gap-3">
+        <h3 class="font-bold text-xl text-sky-950 leading-snug">${esc(L(x.titulo))}</h3>
+        <div class="flex flex-wrap gap-2 text-sm text-slate-700">
+          <span class="inline-flex items-center gap-1.5 bg-slate-100 rounded-full px-3 py-1">${ic('clock')}${esc(L(x.duracion))}</span>
+          <span class="inline-flex items-center gap-1.5 bg-slate-100 rounded-full px-3 py-1">${ic('pin')}${esc(x.punto_encuentro)}</span></div>
         <p class="text-sm text-slate-600">${esc(L(x.descripcion))}</p>
-        <p class="text-xs">⏱ ${esc(L(x.duracion))} · 📍 ${esc(x.punto_encuentro)}</p>
-        <p class="text-xs"><b class="text-emerald-700">${t('inc')}:</b> ${esc((x.incluye?.[lang]||[]).join(', '))}</p>
-        <p class="text-xs"><b class="text-rose-700">${t('noinc')}:</b> ${esc((x.no_incluye?.[lang]||[]).join(', '))}</p>
-        <div class="mt-auto flex items-center justify-between pt-2">
-          <div><b class="text-xl text-sky-900">${money(x.precio_clp)}</b><span class="text-xs text-slate-500"> ${t('pp')}</span></div>
-          <button onclick="open_('${x.id}')" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg">${t('book')}</button></div>
-      </div></article>`).join('') || `<p class="col-span-full text-center">${t('none')}</p>`;
+        <p class="text-sm"><b class="text-emerald-800">${t('inc')}:</b> ${esc((x.incluye?.[lang]||[]).join(', '))}</p>
+        <p class="text-sm"><b class="text-rose-800">${t('noinc')}:</b> ${esc((x.no_incluye?.[lang]||[]).join(', '))}</p>
+        <div class="mt-auto flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+          <div><b class="text-2xl text-sky-950">${money(x.precio_clp)}</b><span class="block text-xs text-slate-600">${t('pp')}</span></div>
+          <button onclick="open_('${x.id}')" class="${BTN} px-6 py-3 min-h-[44px]">${t('book')}</button></div>
+      </div></article>`).join('') || `<p class="col-span-full text-center text-slate-600 py-10">${loadErr?t('loaderr'):(tours.length?t('none'):'…')}</p>`;
 }
 
 // ---------- Portal de Socios ----------
 async function loginModal(msg){
   if(!msg){ const {data:{session}}=await sb.auth.getSession(); if(session) return location.href=PANEL_URL; }
-  $('modal').innerHTML=`<div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3">
-   <div class="bg-white rounded-2xl w-full max-w-sm p-6 space-y-3">
-    <div class="flex justify-between items-start"><div><h3 class="font-bold text-xl text-sky-900">🔐 ${t('portal')}</h3><p class="text-xs text-slate-500">${t('pass_t')}</p></div>
-     <button onclick="$('modal').innerHTML=''" class="text-2xl leading-none">×</button></div>
-    ${msg?`<p class="text-sm text-rose-600">${esc(msg)}</p>`:''}
-    <input id="lem" type="email" placeholder="${t('mail')}" class="w-full border rounded-lg p-2.5">
-    <input id="lpw" type="password" placeholder="${t('pass')}" onkeydown="if(event.key==='Enter')entrarSocio()" class="w-full border rounded-lg p-2.5">
-    <button onclick="entrarSocio()" class="w-full bg-sky-800 hover:bg-sky-900 text-white rounded-lg p-2.5">${t('enter')}</button></div></div>`;
+  $('modal').innerHTML=`<div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3" onclick="if(event.target===this)closeModal()">
+   <div role="dialog" aria-modal="true" aria-label="${t('portal')}" class="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4">
+    <div class="flex justify-between items-start gap-3"><div><h3 class="font-bold text-xl text-sky-950">${t('portal')}</h3><p class="text-sm text-slate-600">${t('pass_t')}</p></div>
+     <button onclick="closeModal()" aria-label="${t('close')}" class="w-11 h-11 -mr-2 -mt-2 text-2xl leading-none rounded-full hover:bg-slate-100">×</button></div>
+    ${msg?`<p role="alert" class="text-sm text-rose-700">${esc(msg)}</p>`:''}
+    <label class="block text-sm font-medium text-slate-700">${t('mail')}<input id="lem" type="email" autocomplete="username" autofocus class="mt-1 block w-full border border-slate-300 rounded-lg p-2.5 text-base"></label>
+    <label class="block text-sm font-medium text-slate-700">${t('pass')}<input id="lpw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrarSocio()" class="mt-1 block w-full border border-slate-300 rounded-lg p-2.5 text-base"></label>
+    <button onclick="entrarSocio()" class="${BTN} w-full py-3 min-h-[44px]">${t('enter')}</button></div></div>`;
+  focusModal();
 }
 async function entrarSocio(){
   const {error}=await sb.auth.signInWithPassword({email:$('lem').value.trim(),password:$('lpw').value});
@@ -115,16 +172,16 @@ async function entrarSocio(){
 
 // ---------- Reserva ----------
 async function open_(id){
-  sel=tours.find(x=>x.id===id); pax=[{}]; disp={}; fechaSel=null;
+  sel=tours.find(x=>x.id===id); pax=[{}]; disp={}; fechaSel=null; err=''; busy=false;
   const hoy=new Date(), fin=new Date(Date.now()+180*864e5); maxFecha=isoD(fin);
   mes=new Date(hoy.getFullYear(),hoy.getMonth(),1);
   const {data}=await sb.rpc('disponibilidad',{p_tour:id,p_desde:isoD(hoy),p_hasta:isoD(fin)});
   (data||[]).forEach(r=>disp[r.fecha]=r.disponibles);
-  modal();
+  modal(); focusModal();
 }
 function mover(n){ mes=new Date(mes.getFullYear(),mes.getMonth()+n,1); modal(); }
-function elegir(f){ fechaSel=f; const max=disp[f]; if(pax.length>max) pax=pax.slice(0,max); modal(); }
-function addPax(){ if(fechaSel && pax.length>=disp[fechaSel]) return alert(t('maxp')); pax.push({}); modal(); }
+function elegir(f){ fechaSel=f; err=''; const max=disp[f]; if(pax.length>max) pax=pax.slice(0,max); modal(); }
+function addPax(){ if(fechaSel && pax.length>=disp[fechaSel]){ err=t('maxp'); return modal(); } pax.push({}); modal(); }
 function setP(i,k,v){ pax[i][k]=v; }
 
 function calendario(){
@@ -136,43 +193,53 @@ function calendario(){
   for(let d=1; d<=n; d++){
     const f=iso(y,m,d), v=disp[f], ok=v>0, act=f===fechaSel;
     celdas+= ok
-     ? `<button onclick="elegir('${f}')" class="aspect-square rounded-xl flex flex-col items-center justify-center transition ${act?'bg-orange-500 text-white shadow-lg scale-105':'bg-sky-50 hover:bg-sky-100 text-sky-900'}">
-         <span class="font-semibold">${d}</span><span class="text-[10px] ${act?'text-white/90':'text-emerald-600'}">${v} ${t('avail')}</span></button>`
-     : `<div class="aspect-square rounded-xl flex items-center justify-center text-slate-300 text-sm ${v===0?'line-through':''}">${d}</div>`;
+     ? `<button onclick="elegir('${f}')" aria-pressed="${act}" aria-label="${d}, ${v} ${t('avail')}" class="aspect-square min-h-[44px] rounded-xl flex flex-col items-center justify-center transition ${act?'bg-orange-700 text-white shadow-lg scale-105':'bg-sky-50 hover:bg-sky-100 text-sky-950'}">
+         <span class="font-bold">${d}</span><span class="text-[11px] font-semibold ${act?'text-white':'text-emerald-800'}">${v} ${t('avail')}</span></button>`
+     : `<div class="aspect-square flex items-center justify-center text-slate-400 text-sm ${v===0?'line-through':''}" aria-hidden="true">${d}</div>`;
   }
-  return `<div class="mt-3 border rounded-2xl p-3 bg-white">
+  return `<div class="border rounded-2xl p-3 bg-white">
     <div class="flex items-center justify-between mb-2">
-      <button onclick="mover(-1)" ${esPrimero?'disabled':''} class="w-9 h-9 rounded-full bg-slate-100 disabled:opacity-30">‹</button>
-      <b class="capitalize text-sky-900">${new Intl.DateTimeFormat(loc(),{month:'long',year:'numeric'}).format(mes)}</b>
-      <button onclick="mover(1)" ${esUltimo?'disabled':''} class="w-9 h-9 rounded-full bg-slate-100 disabled:opacity-30">›</button></div>
-    <div class="grid grid-cols-7 gap-1 text-center text-xs text-slate-500 mb-1">${dias.map(d=>`<div>${d}</div>`).join('')}</div>
+      <button onclick="mover(-1)" aria-label="‹" ${esPrimero?'disabled':''} class="w-11 h-11 rounded-full bg-slate-100 disabled:opacity-30 text-lg">‹</button>
+      <b class="capitalize text-sky-950">${new Intl.DateTimeFormat(loc(),{month:'long',year:'numeric'}).format(mes)}</b>
+      <button onclick="mover(1)" aria-label="›" ${esUltimo?'disabled':''} class="w-11 h-11 rounded-full bg-slate-100 disabled:opacity-30 text-lg">›</button></div>
+    <div class="grid grid-cols-7 gap-1 text-center text-xs text-slate-600 mb-1">${dias.map(d=>`<div>${d}</div>`).join('')}</div>
     <div class="grid grid-cols-7 gap-1">${celdas}</div>
-    <p class="text-center text-sm mt-2 ${fechaSel?'text-orange-600 font-semibold':'text-slate-400'}">${fechaSel? new Intl.DateTimeFormat(loc(),{dateStyle:'full'}).format(new Date(fechaSel+'T00:00')) : t('pick')}</p></div>`;
+    <p class="text-center text-sm mt-3 ${fechaSel?'text-orange-800 font-semibold':'text-slate-600'}">${fechaSel? new Intl.DateTimeFormat(loc(),{dateStyle:'full'}).format(new Date(fechaSel+'T00:00')) : t('pick')}</p></div>`;
+}
+function campo(i,k,label,type,ac,req,full){
+  return `<label class="block text-xs font-medium text-slate-700 ${full?'col-span-2':''}">${label}${req?' *':''}
+   <input type="${type}" autocomplete="${ac}" ${req?'required':''} value="${esc(pax[i][k])}" oninput="setP(${i},'${k}',this.value)" class="mt-1 block w-full border border-slate-300 rounded-lg p-2.5 text-base text-slate-900"></label>`;
 }
 function modal(msg){
-  $('modal').innerHTML = `<div class="fixed inset-0 bg-black/60 z-50 overflow-auto p-3"><div class="bg-white rounded-2xl max-w-xl mx-auto p-5">
-   <div class="flex justify-between"><h3 class="font-bold text-xl text-sky-900">${esc(L(sel.titulo))}</h3><button onclick="sel=null;$('modal').innerHTML=''" class="text-2xl leading-none">×</button></div>
-   ${msg?`<div class="my-4 p-4 bg-emerald-50 rounded-lg text-emerald-800">${msg}</div>`:`
-   ${calendario()}
-   ${pax.map((p,i)=>`<fieldset class="border rounded-xl p-3 mt-3 grid grid-cols-2 gap-2 text-sm"><legend class="px-1 text-xs text-slate-500">#${i+1}</legend>
-     <input placeholder="${t('name')}" value="${esc(p.nombre)}" oninput="setP(${i},'nombre',this.value)" class="border rounded-lg p-2 col-span-2">
-     <input placeholder="${t('doc')}" value="${esc(p.documento)}" oninput="setP(${i},'documento',this.value)" class="border rounded-lg p-2">
-     <input placeholder="${t('tel')}" value="${esc(p.telefono)}" oninput="setP(${i},'telefono',this.value)" class="border rounded-lg p-2">
-     <input placeholder="${t('mail')}" value="${esc(p.correo)}" oninput="setP(${i},'correo',this.value)" class="border rounded-lg p-2 col-span-2">
-     <input placeholder="${t('extra')}" value="${esc(p.detalles)}" oninput="setP(${i},'detalles',this.value)" class="border rounded-lg p-2 col-span-2"></fieldset>`).join('')}
-   <button onclick="addPax()" class="mt-2 text-sky-700 text-sm">${t('add')}</button>
-   <div class="flex justify-between items-center mt-4"><b>${t('total')}: ${money(sel.precio_clp*pax.length)}</b>
-    <button onclick="pagar()" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg">${t('pay')}</button></div>`}
+  $('modal').innerHTML = `<div class="fixed inset-0 bg-black/60 z-50 overflow-auto p-0 sm:p-6" onclick="if(event.target===this)closeModal()">
+  <div role="dialog" aria-modal="true" aria-label="${esc(L(sel.titulo))}" class="bg-white sm:rounded-2xl max-w-xl mx-auto min-h-full sm:min-h-0 flex flex-col">
+   <div class="sticky top-0 z-10 bg-white sm:rounded-t-2xl flex justify-between items-center gap-3 px-5 py-3 border-b">
+     <h3 class="font-bold text-xl text-sky-950">${esc(L(sel.titulo))}</h3>
+     <button onclick="closeModal()" aria-label="${t('close')}" class="w-11 h-11 -mr-2 text-2xl leading-none rounded-full hover:bg-slate-100">×</button></div>
+   ${msg?`<div class="m-5 p-4 bg-emerald-50 rounded-lg text-emerald-900" role="status">${msg}</div>`:`
+   <div class="flex-1 p-5 space-y-3">
+    ${calendario()}
+    ${pax.map((p,i)=>`<fieldset class="border rounded-xl p-3 grid grid-cols-2 gap-2"><legend class="px-1 text-xs font-semibold text-slate-600">#${i+1}</legend>
+      ${campo(i,'nombre',t('name'),'text','name',true,true)}${campo(i,'documento',t('doc'),'text','off',true)}${campo(i,'telefono',t('tel'),'tel','tel',false)}
+      ${campo(i,'correo',t('mail'),'email','email',true,true)}${campo(i,'detalles',t('extra'),'text','off',false,true)}</fieldset>`).join('')}
+    <button onclick="addPax()" class="text-sky-800 font-semibold text-sm min-h-[44px]">${t('add')}</button>
+    ${err?`<p role="alert" class="text-sm text-rose-700 font-medium">${esc(err)}</p>`:''}
+   </div>
+   <div class="sticky bottom-0 bg-white sm:rounded-b-2xl border-t px-5 py-3 flex items-center justify-between gap-3">
+    <div><b class="text-lg text-sky-950">${t('total')}: ${money(sel.precio_clp*pax.length)}</b>${cur!=='CLP'?`<span class="block text-[11px] text-slate-600">≈ ${t('fx')}</span>`:''}</div>
+    <button onclick="pagar()" ${busy?'disabled':''} class="${BTN} px-6 py-3 min-h-[44px] disabled:opacity-60">${busy?t('paying'):t('pay')}</button></div>`}
   </div></div>`;
 }
 async function pagar(){
-  if(!fechaSel) return alert(t('pick'));
-  if(pax.some(p=>!p.nombre||!p.documento||!p.correo)) return alert(t('req'));
+  if(busy) return;
+  if(!fechaSel){ err=t('pick'); return modal(); }
+  if(pax.some(p=>!p.nombre?.trim()||!p.documento?.trim()||!p.correo?.trim())){ err=t('req'); return modal(); }
+  err=''; busy=true; modal();
   const {data:r,error}=await sb.rpc('crear_reserva',{p_tour:sel.id,p_fecha:fechaSel,p_participantes:pax});
-  if(error) return alert(error.message);
+  if(error){ busy=false; err=error.message; return modal(); }
   // AQUÍ después: redirigir a Webpay/Mercado Pago (Edge Function). Por ahora se simula el pago:
   const {data:p,error:e2}=await sb.rpc('simular_pago',{p_reserva:r.id});
-  if(e2) return alert(e2.message);
+  busy=false; if(e2){ err=e2.message; return modal(); }
   modal(`<b>${t('ok')}</b><br>${t('code')}: <b>${esc(p.codigo)}</b><br>${esc(fechaSel)} · ${p.cantidad_personas} · ${money(p.monto_total)}`);
 }
 load();
